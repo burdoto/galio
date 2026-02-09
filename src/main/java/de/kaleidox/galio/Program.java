@@ -44,7 +44,9 @@ public class Program {
     @Order
     @EventListener
     public void on(ApplicationStartedEvent event) {
-        event.getApplicationContext().getBean(CommandManager.class).initialize();
+        var commandManager = event.getApplicationContext().getBean(CommandManager.class);
+        commandManager.register(this);
+        commandManager.initialize();
 
         log.info("Initialized");
     }

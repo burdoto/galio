@@ -1,7 +1,7 @@
 package de.kaleidox.galio.feature.timezone;
 
+import de.kaleidox.galio.preferences.user.UserPreferences;
 import de.kaleidox.galio.repo.UserPreferenceRepo;
-import de.kaleidox.galio.user.UserPreferences;
 import lombok.extern.java.Log;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;

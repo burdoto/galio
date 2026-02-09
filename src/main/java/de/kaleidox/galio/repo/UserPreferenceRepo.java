@@ -1,6 +1,6 @@
 package de.kaleidox.galio.repo;
 
-import de.kaleidox.galio.user.UserPreferences;
+import de.kaleidox.galio.preferences.user.UserPreferences;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;

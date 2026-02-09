@@ -21,7 +21,6 @@ public class DiscordProvider {
     @Bean
     public JDA jda(@Autowired Config config) throws InterruptedException {
         return JDABuilder.create(config.getDiscord().getToken(), GatewayIntent.getIntents(GatewayIntent.ALL_INTENTS))
-                .addEventListeners(this)
                 .build()
                 .awaitReady();
     }

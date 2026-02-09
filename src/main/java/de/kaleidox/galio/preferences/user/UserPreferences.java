@@ -1,4 +1,4 @@
-package de.kaleidox.galio.user;
+package de.kaleidox.galio.preferences.user;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

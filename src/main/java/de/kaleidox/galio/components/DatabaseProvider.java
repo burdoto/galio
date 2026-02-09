@@ -1,13 +1,13 @@
 package de.kaleidox.galio.components;
 
 import de.kaleidox.galio.components.config.model.Config;
+import org.mariadb.jdbc.Driver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
-import java.sql.Driver;
 
 @Component
 public class DatabaseProvider {
