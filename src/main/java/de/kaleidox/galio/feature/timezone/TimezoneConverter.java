@@ -94,8 +94,8 @@ public class TimezoneConverter extends ListenerAdapter {
 
         RestAction<?> action = reaction.removeReaction(user);
         try {
-            // find author timezone
-            var opt = users.findById(author.getIdLong()).map(UserPreferences::getTimezone);
+            // find reacter timezone
+            var opt = users.findById(user.getIdLong()).map(UserPreferences::getTimezone);
             if (opt.isEmpty()) {
                 action = action.flatMap($ -> channel.sendMessageEmbeds(new EmbedBuilder().setDescription(
                                 "Sorry, but you did not set your timezone!")
@@ -105,8 +105,8 @@ public class TimezoneConverter extends ListenerAdapter {
             }
             var targetZone = opt.get();
 
-            // find target timezone
-            opt = users.findById(user.getIdLong()).map(UserPreferences::getTimezone);
+            // find author timezone
+            opt = users.findById(author.getIdLong()).map(UserPreferences::getTimezone);
             if (opt.isEmpty()) {
                 action = action.flatMap($ -> channel.sendMessageEmbeds(new EmbedBuilder().setDescription(
                                 "Sorry, but %s did not set their timezone!".formatted(author))
