@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: Galio
+  jpa:
+    hibernate:
+      ddl-auto: update
+  web:
+    resources:
+      static-locations: classpath:/static/
+  mvc:
+    static-path-pattern: /static/**
+  session:
+    jdbc:
+      initialize-schema: always
+logging:
+  level:
+    root: info
+    de.kaleidox: debug
+    org.comroid: debug
+    com.ampznetwork: debug
