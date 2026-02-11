@@ -4,6 +4,7 @@ import de.kaleidox.galio.preferences.guild.GuildPreferences;
 import de.kaleidox.galio.preferences.guild.ReactionRoleBinding;
 import de.kaleidox.galio.preferences.guild.ReactionRoleSet;
 import de.kaleidox.galio.repo.GuildPreferenceRepo;
+import de.kaleidox.galio.util.Constant;
 import lombok.extern.java.Log;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
@@ -248,8 +249,19 @@ public class ReactionRoleService extends ListenerAdapter {
             case COMPONENT_ID_ROLESET_EDIT -> {
                 var mapping = interaction.getValue(OPTION_ID_CHANNEL);
                 if (mapping != null) roleSet.setChannelId(mapping.getAsMentions().getChannels().getFirst().getIdLong());
+
                 mapping = interaction.getValue(OPTION_ID_NAME);
-                if (mapping != null && !mapping.getAsString().isBlank()) roleSet.setName(mapping.getAsString());
+                if (mapping != null && !mapping.getAsString().isBlank()) {
+                    var buf = mapping.getAsString();
+                    if (prefs.findReactionRoleSet(buf).isPresent()) {
+                        event.reply("%s Role set with name %s already exists".formatted(Constant.EMOJI_WARNING, buf))
+                                .setEphemeral(true)
+                                .queue();
+                        return;
+                    }
+                    roleSet.setName(buf);
+                }
+
                 mapping = interaction.getValue(OPTION_ID_DESCRIPTION);
                 if (mapping != null) roleSet.setDescription(mapping.getAsString());
             }
@@ -262,6 +274,13 @@ public class ReactionRoleService extends ListenerAdapter {
                 var name  = Objects.requireNonNull(interaction.getValue(OPTION_ID_NAME), "name value").getAsString();
                 var description = Objects.requireNonNull(interaction.getValue(OPTION_ID_DESCRIPTION),
                         "description value").getAsString();
+
+                if (roleSet.findBinding(name).isPresent()) {
+                    event.reply("%s Role binding with name %s already exists".formatted(Constant.EMOJI_WARNING, name))
+                            .setEphemeral(true)
+                            .queue();
+                    return;
+                }
 
                 var obj = new ReactionRoleBinding(emoji, name, description, role.getIdLong());
                 roleSet.getRoles().add(obj);
@@ -276,10 +295,21 @@ public class ReactionRoleService extends ListenerAdapter {
 
                 var mapping = interaction.getValue(OPTION_ID_ROLE);
                 if (mapping != null) role.setRoleId(mapping.getAsMentions().getRoles().getFirst().getIdLong());
+
                 mapping = interaction.getValue(OPTION_ID_EMOJI);
                 if (mapping != null) role.setEmoji(mapping.getAsString());
+
                 mapping = interaction.getValue(OPTION_ID_NAME);
-                if (mapping != null && !mapping.getAsString().isBlank()) role.setName(mapping.getAsString());
+                if (mapping != null && !mapping.getAsString().isBlank()) {
+                    var buf = mapping.getAsString();
+                    if (prefs.findReactionRoleSet(buf).isPresent()) {
+                        event.reply("%s Role binding with name %s already exists".formatted(Constant.EMOJI_WARNING,
+                                buf)).setEphemeral(true).queue();
+                        return;
+                    }
+                    role.setName(buf);
+                }
+
                 mapping = interaction.getValue(OPTION_ID_DESCRIPTION);
                 if (mapping != null) role.setDescription(mapping.getAsString());
             }
