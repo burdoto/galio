@@ -16,7 +16,7 @@ public interface UserPreferenceRepo extends CrudRepository<UserPreferences, @Not
         if (result.isPresent()) {
             user = result.get();
             user.setTimezone(zone);
-        } else user = UserPreferences.builder().timezone(zone).build();
+        } else user = UserPreferences.builder().userId(userId).timezone(zone).build();
 
         save(user);
     }
