@@ -191,8 +191,8 @@ public class ReactionRoleService extends ListenerAdapter {
         var    ci          = setName.indexOf(':');
         String roleName    = null;
         if (ci != -1) {
-            roleName = setName.substring(ci);
-            setName  = setName.substring(0, ci - 1);
+            roleName = setName.substring(ci + 1);
+            setName  = setName.substring(0, ci);
         }
         var action  = componentId.substring(0, li + 1);
         var roleSet = guilds.findReactionRoleSet(event.getGuild().getIdLong(), setName).orElseThrow();
@@ -237,8 +237,8 @@ public class ReactionRoleService extends ListenerAdapter {
         var    ci          = setName.indexOf(':');
         String roleName    = null;
         if (ci != -1) {
-            roleName = setName.substring(ci);
-            setName  = setName.substring(0, ci - 1);
+            roleName = setName.substring(ci + 1);
+            setName  = setName.substring(0, ci);
         }
         var action      = componentId.substring(0, li + 1);
         var prefs       = guilds.findById(event.getGuild().getIdLong()).orElseThrow();
@@ -263,7 +263,7 @@ public class ReactionRoleService extends ListenerAdapter {
                 }
 
                 mapping = interaction.getValue(OPTION_ID_DESCRIPTION);
-                if (mapping != null) roleSet.setDescription(mapping.getAsString());
+                if (mapping != null && !mapping.getAsString().isBlank()) roleSet.setDescription(mapping.getAsString());
             }
             case COMPONENT_ID_ROLE_ADD -> {
                 var role = Objects.requireNonNull(interaction.getValue(OPTION_ID_ROLE), "role value")
@@ -297,7 +297,7 @@ public class ReactionRoleService extends ListenerAdapter {
                 if (mapping != null) role.setRoleId(mapping.getAsMentions().getRoles().getFirst().getIdLong());
 
                 mapping = interaction.getValue(OPTION_ID_EMOJI);
-                if (mapping != null) role.setEmoji(mapping.getAsString());
+                if (mapping != null && !mapping.getAsString().isBlank()) role.setEmoji(mapping.getAsString());
 
                 mapping = interaction.getValue(OPTION_ID_NAME);
                 if (mapping != null && !mapping.getAsString().isBlank()) {
@@ -311,7 +311,7 @@ public class ReactionRoleService extends ListenerAdapter {
                 }
 
                 mapping = interaction.getValue(OPTION_ID_DESCRIPTION);
-                if (mapping != null) role.setDescription(mapping.getAsString());
+                if (mapping != null && !mapping.getAsString().isBlank()) role.setDescription(mapping.getAsString());
             }
             default -> throw new IllegalStateException("Unexpected value: " + action);
         }
