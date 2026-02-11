@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.SelfUser;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
@@ -88,6 +89,7 @@ public class ReactionRoleService extends ListenerAdapter {
             var msg = roleSet.createMessage();
             channel.sendMessage(msg.build()).flatMap(it -> {
                 roleSet.setMessageId(it.getIdLong());
+                guilds.save(prefs);
 
                 return RestAction.allOf(roleSet.getRoles()
                         .stream()
@@ -97,7 +99,6 @@ public class ReactionRoleService extends ListenerAdapter {
                         .toList());
             }).queue();
         }
-        guilds.save(prefs);
 
         return "Reaction messages were resent";
     }
@@ -334,7 +335,7 @@ public class ReactionRoleService extends ListenerAdapter {
         var emoji = event.getEmoji();
         var user  = event.getUser();
 
-        if (user == null) return;
+        if (user == null || user instanceof SelfUser) return;
 
         guilds.findReactionRoleSet(event.getGuild().getIdLong(), event.getMessageIdLong())
                 .stream()
