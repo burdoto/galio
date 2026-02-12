@@ -12,6 +12,9 @@ spring:
   session:
     jdbc:
       initialize-schema: always
+  datasource:
+    hikari:
+      connection-init-sql: "SET collation_connection = 'utf8mb4_unicode_ci'"
 logging:
   level:
     root: info
