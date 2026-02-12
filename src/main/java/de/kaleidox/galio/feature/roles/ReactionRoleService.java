@@ -111,8 +111,13 @@ public class ReactionRoleService extends ListenerAdapter {
     ) {
         if (name.contains("-")) throw new CommandError("Name cannot contain dashes (`-`)");
 
-        var              result = guilds.findById(guild.getIdLong());
-        var              set    = new ReactionRoleSet(name, description, channel.getIdLong(), new ArrayList<>(), null);
+        var result = guilds.findById(guild.getIdLong());
+        var set = new ReactionRoleSet(guild.getIdLong(),
+                name,
+                description,
+                channel.getIdLong(),
+                new ArrayList<>(),
+                null);
         GuildPreferences prefs;
 
         if (result.isPresent()) {
