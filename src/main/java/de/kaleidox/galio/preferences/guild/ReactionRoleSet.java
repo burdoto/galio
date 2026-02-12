@@ -24,6 +24,7 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import org.comroid.annotations.Instance;
 import org.comroid.commands.autofill.IAutoFillProvider;
 import org.comroid.commands.impl.CommandUsage;
+import org.hibernate.annotations.Collate;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
@@ -42,13 +43,13 @@ import static de.kaleidox.galio.util.ApplicationContextProvider.*;
 @IdClass(ReactionRoleSet.Key.class)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = "message_id") })
 public class ReactionRoleSet {
-    @Id long   guildId;
-    @Id String name;
-    String description;
-    long   channelId;
-    Method method;
-    @ElementCollection(fetch = FetchType.EAGER) List<ReactionRoleBinding> roles;
-    @Nullable                                   Long                      messageId;
+    @Collate("utf8mb4_uca1400_ai_ci") @Id                                         long                      guildId;
+    @Collate("utf8mb4_uca1400_ai_ci") @Id                                         String                    name;
+    @Collate("utf8mb4_uca1400_ai_ci")                                             String                    description;
+    @Collate("utf8mb4_uca1400_ai_ci")                                             long                      channelId;
+    @Collate("utf8mb4_uca1400_ai_ci")                                             Method                    method;
+    @Collate("utf8mb4_uca1400_ai_ci") @ElementCollection(fetch = FetchType.EAGER) List<ReactionRoleBinding> roles;
+    @Collate("utf8mb4_uca1400_ai_ci") @Nullable                                   Long                      messageId;
 
     public MessageCreateBuilder createMessage() {
         return new MessageCreateBuilder().addEmbeds(toEmbed().build());

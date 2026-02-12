@@ -2,8 +2,6 @@ package de.kaleidox.galio.repo;
 
 import de.kaleidox.galio.preferences.guild.ReactionRoleSet;
 import jakarta.transaction.Transactional;
-import org.hibernate.annotations.Collate;
-import org.jspecify.annotations.NonNull;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -14,11 +12,6 @@ import java.util.Optional;
 
 @Repository
 public interface ReactionSetRepo extends CrudRepository<ReactionRoleSet, ReactionRoleSet.Key> {
-    @NonNull
-    @Override
-    @Collate("utf8mb4_uca1400_ai_ci")
-    Optional<ReactionRoleSet> findById(ReactionRoleSet.Key key);
-
     Collection<ReactionRoleSet> findAllByGuildId(long guildId);
 
     Optional<ReactionRoleSet> findByMessageId(long messageId);
