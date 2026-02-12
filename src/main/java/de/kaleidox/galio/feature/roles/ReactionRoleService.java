@@ -70,13 +70,18 @@ public class ReactionRoleService extends ListenerAdapter {
     @Autowired JDA             jda;
 
     @Command(permission = "8")
-    @Description("Resend all reaction role messages in this server")
+    @Description("Resend reaction role messages")
     @SuppressWarnings("UnusedReturnValue")
-    public String resend(Guild guild) {
+    public String resend(
+            Guild guild, @Command.Arg(required = false,
+                                      autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) @Nullable String set
+    ) {
         var sets = setRepo.findAllByGuildId(guild.getIdLong());
         if (sets.isEmpty()) return "There are no configured reaction roles";
 
         for (var roleSet : sets) {
+            if (set != null && !roleSet.getName().equals(set)) continue;
+
             var channelId = roleSet.getChannelId();
             var channel   = jda.getTextChannelById(channelId);
 
