@@ -45,7 +45,7 @@ import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -55,7 +55,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 @Log
-@Component
+@Service
 @Command("roles")
 @Description("Configure reaction roles")
 public class ReactionRoleService extends ListenerAdapter {
@@ -77,8 +77,9 @@ public class ReactionRoleService extends ListenerAdapter {
     @Description("Resend reaction role messages")
     @SuppressWarnings("UnusedReturnValue")
     public String resend(
-            Guild guild, @Command.Arg(required = false,
-                                      autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) @Nullable String set
+            Guild guild,
+            @Command.Arg(required = false, autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) @Description(
+                    "The reaction set to resend") @Nullable String set
     ) {
         var sets = setRepo.findAllByGuildId(guild.getIdLong());
         if (sets.isEmpty()) return "There are no configured reaction roles";
