@@ -124,8 +124,8 @@ public class ReactionRoleService extends ListenerAdapter {
                 description,
                 channel.getIdLong(),
                 method,
-                new ArrayList<>(),
-                null);
+                null,
+                new ArrayList<>());
         setRepo.save(set);
 
         return "Reaction role set `%s` was created".formatted(name);
