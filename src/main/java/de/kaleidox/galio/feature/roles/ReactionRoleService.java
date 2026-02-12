@@ -45,6 +45,7 @@ import org.springframework.stereotype.Component;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
@@ -63,6 +64,7 @@ public class ReactionRoleService extends ListenerAdapter {
     public static final String OPTION_ID_EMOJI           = "option-emoji";
     public static final String OPTION_ID_NAME            = "option-name";
     public static final String OPTION_ID_DESCRIPTION     = "option-description";
+    public static final String OPTION_ID_METHOD = "option-method";
 
     @Autowired ReactionSetRepo setRepo;
     @Autowired JDA             jda;
@@ -103,8 +105,8 @@ public class ReactionRoleService extends ListenerAdapter {
     @Command(permission = "8")
     @Description("Create a set of role reactions")
     public String createset(
-            Guild guild, @Command.Arg String name, @Command.Arg String description,
-            @Command.Arg TextChannel channel
+            Guild guild, @Command.Arg String name, @Command.Arg String description, @Command.Arg TextChannel channel,
+            @Command.Arg ReactionRoleSet.Method method
     ) {
         if (name.contains("-")) throw new CommandError("Name cannot contain dashes (`-`)");
 
@@ -112,6 +114,7 @@ public class ReactionRoleService extends ListenerAdapter {
                 name,
                 description,
                 channel.getIdLong(),
+                method,
                 new ArrayList<>(),
                 null);
         setRepo.save(set);
@@ -278,6 +281,10 @@ public class ReactionRoleService extends ListenerAdapter {
                 mapping = interaction.getValue(OPTION_ID_DESCRIPTION);
                 if (mapping != null && !mapping.getAsString().isBlank()) roleSet.setDescription(mapping.getAsString());
 
+                mapping = interaction.getValue(OPTION_ID_METHOD);
+                if (mapping != null) roleSet.setMethod(ReactionRoleSet.Method.valueOf(mapping.getAsStringList()
+                        .getFirst()));
+
                 setRepo.save(roleSet);
             }
             case COMPONENT_ID_ROLE_ADD -> {
@@ -356,7 +363,13 @@ public class ReactionRoleService extends ListenerAdapter {
         var set = result.get();
 
         var binding = set.getRoles().stream().filter(role -> role.getEmoji().equals(emoji.getFormatted())).findAny();
-        if (binding.isEmpty()) event.getReaction().removeReaction(event.getUser()).queue();
+
+        // remove unknown reactions
+        if (binding.isEmpty() || !set.getMethod().mayPerformAction(event)) {
+            event.getReaction().removeReaction(event.getUser()).queue();
+            return;
+        }
+
         binding.map(ReactionRoleBinding::getRoleId)
                 .map(jda::getRoleById)
                 .ifPresent(role -> action.apply(user, role).queue());
@@ -367,17 +380,24 @@ public class ReactionRoleService extends ListenerAdapter {
         var optionChannel     = EntitySelectMenu.create(OPTION_ID_CHANNEL, EntitySelectMenu.SelectTarget.CHANNEL);
         var optionName        = TextInput.create(OPTION_ID_NAME, TextInputStyle.SHORT);
         var optionDescription = TextInput.create(OPTION_ID_DESCRIPTION, TextInputStyle.PARAGRAPH);
+        var optionMethod = StringSelectMenu.create(OPTION_ID_METHOD)
+                .addOptions(Arrays.stream(ReactionRoleSet.Method.values())
+                        .map(ReactionRoleSet.Method::getSelectOption)
+                        .toList())
+                .setDefaultOptions(ReactionRoleSet.Method.PICK_MANY.getSelectOption());
 
         if (roleSet != null) {
             optionChannel.setDefaultValues(EntitySelectMenu.DefaultValue.channel(roleSet.getChannelId()));
             optionName.setRequired(false).setPlaceholder(roleSet.getName());
             optionDescription.setRequired(false).setPlaceholder(roleSet.getDescription());
+            if (roleSet.getMethod() != null) optionMethod.setDefaultOptions(roleSet.getMethod().getSelectOption());
         }
 
         return Modal.create(modalId, title)
                 .addComponents(Label.of("Channel", optionChannel.build()),
                         Label.of("Name", optionName.build()),
-                        Label.of("Description", optionDescription.build()));
+                        Label.of("Description", optionDescription.build()),
+                        Label.of("Method", optionMethod.build()));
     }
 
     private Modal.Builder createRoleMutatorModal(String modalId, String title, @Nullable ReactionRoleBinding role) {

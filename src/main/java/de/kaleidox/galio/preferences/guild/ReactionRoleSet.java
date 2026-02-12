@@ -8,12 +8,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.ISnowflake;
+import net.dv8tion.jda.api.events.message.react.GenericMessageReactionEvent;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import org.comroid.annotations.Instance;
 import org.comroid.commands.autofill.IAutoFillProvider;
@@ -40,6 +46,7 @@ public class ReactionRoleSet {
     @Id String name;
     String description;
     long   channelId;
+    Method method;
     @ElementCollection(fetch = FetchType.EAGER) List<ReactionRoleBinding> roles;
     @Nullable                                   Long                      messageId;
 
@@ -63,6 +70,54 @@ public class ReactionRoleSet {
     @Override
     public int hashCode() {
         return Objects.hash(channelId, name);
+    }
+
+    @Getter
+    @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
+    public enum Method {
+        PICK_ONE("Select one") {
+            @Override
+            public boolean mayPerformAction(GenericMessageReactionEvent event) {
+                var user  = event.retrieveUser().complete();
+                var emoji = event.getEmoji();
+
+                return event.retrieveMessage()
+                        .complete()
+                        .getReactions()
+                        .stream()
+                        .filter(reaction -> !reaction.getEmoji().equals(emoji))
+                        .filter(reaction -> reaction.retrieveUsers().complete().stream().anyMatch(user::equals))
+                        .findAny()
+                        .isEmpty();
+            }
+        }, PICK_MANY("Pick all that apply") {
+            @Override
+            public boolean mayPerformAction(GenericMessageReactionEvent event) {
+                return true;
+            }
+        }, VERIFY("Select one thing, only once") {
+            @Override
+            public boolean mayPerformAction(GenericMessageReactionEvent event) {
+                var member = event.retrieveMember().complete();
+
+                return bean(ReactionSetRepo.class).findByMessageId(event.getMessageIdLong())
+                        .stream()
+                        .flatMap(set -> set.roles.stream())
+                        .mapToLong(ReactionRoleBinding::getRoleId)
+                        .noneMatch(roleId -> member.getRoles()
+                                .stream()
+                                .mapToLong(ISnowflake::getIdLong)
+                                .anyMatch(other -> roleId == other));
+            }
+        };
+
+        SelectOption selectOption;
+
+        Method(String label) {
+            this.selectOption = SelectOption.of(label, name());
+        }
+
+        public abstract boolean mayPerformAction(GenericMessageReactionEvent event);
     }
 
     public enum AutoFillSetNames implements IAutoFillProvider {
