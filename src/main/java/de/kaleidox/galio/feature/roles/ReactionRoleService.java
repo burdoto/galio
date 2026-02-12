@@ -212,7 +212,7 @@ public class ReactionRoleService extends ListenerAdapter {
         var set = setRepo.findByMessageId(message.getIdLong()).orElseThrow();
         message.editMessageEmbeds(set.toEmbed().build()).queue();
 
-        event.reply("Successfully refreshed the message").queue();
+        event.reply("Successfully refreshed the message").setEphemeral(true).queue();
     }
 
     @Override
