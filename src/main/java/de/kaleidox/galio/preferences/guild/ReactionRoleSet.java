@@ -1,10 +1,13 @@
 package de.kaleidox.galio.preferences.guild;
 
-import de.kaleidox.galio.repo.GuildPreferenceRepo;
+import de.kaleidox.galio.repo.ReactionSetRepo;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,26 +31,29 @@ import static de.kaleidox.galio.util.ApplicationContextProvider.*;
 @Data
 @Entity
 @Builder
-@IdClass(ReactionRoleSet.Key.class)
 @NoArgsConstructor
 @AllArgsConstructor
+@IdClass(ReactionRoleSet.Key.class)
+@Table(uniqueConstraints = { @UniqueConstraint(columnNames = "message_id") })
 public class ReactionRoleSet {
     @Id long   guildId;
     @Id String name;
     String description;
     long   channelId;
-    @ElementCollection List<ReactionRoleBinding> roles;
-    @Nullable          Long                      messageId;
+    @ElementCollection(fetch = FetchType.EAGER) List<ReactionRoleBinding> roles;
+    @Nullable                                   Long                      messageId;
 
     public MessageCreateBuilder createMessage() {
+        return new MessageCreateBuilder().addEmbeds(toEmbed().build());
+    }
+
+    public EmbedBuilder toEmbed() {
         var embed = new EmbedBuilder().setTitle(name)
                 .setDescription(description)
                 .setColor(new Color(hashCode()))
                 .setFooter("Select your desired roles by reacting below");
-
         roles.stream().map(ReactionRoleBinding::toField).forEachOrdered(embed::addField);
-
-        return new MessageCreateBuilder().addEmbeds(embed.build());
+        return embed;
     }
 
     public Optional<ReactionRoleBinding> findBinding(String name) {
@@ -65,10 +71,7 @@ public class ReactionRoleSet {
         @Override
         public Stream<? extends CharSequence> autoFill(CommandUsage usage, String argName, String currentValue) {
             return usage.fromContext(Guild.class)
-                    .findAny()
-                    .flatMap(guild -> bean(GuildPreferenceRepo.class).findById(guild.getIdLong()))
-                    .stream()
-                    .flatMap(prefs -> prefs.getRoleSets().stream())
+                    .flatMap(guild -> bean(ReactionSetRepo.class).findAllByGuildId(guild.getIdLong()).stream())
                     .map(ReactionRoleSet::getName);
         }
     }
@@ -79,10 +82,7 @@ public class ReactionRoleSet {
         @Override
         public Stream<? extends CharSequence> autoFill(CommandUsage usage, String argName, String currentValue) {
             return usage.fromContext(Guild.class)
-                    .findAny()
-                    .flatMap(guild -> bean(GuildPreferenceRepo.class).findById(guild.getIdLong()))
-                    .stream()
-                    .flatMap(prefs -> prefs.getRoleSets().stream())
+                    .flatMap(guild -> bean(ReactionSetRepo.class).findAllByGuildId(guild.getIdLong()).stream())
                     .flatMap(set -> set.getRoles().stream())
                     .map(ReactionRoleBinding::getName);
         }

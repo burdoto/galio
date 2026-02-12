@@ -1,9 +1,8 @@
 package de.kaleidox.galio.feature.roles;
 
-import de.kaleidox.galio.preferences.guild.GuildPreferences;
 import de.kaleidox.galio.preferences.guild.ReactionRoleBinding;
 import de.kaleidox.galio.preferences.guild.ReactionRoleSet;
-import de.kaleidox.galio.repo.GuildPreferenceRepo;
+import de.kaleidox.galio.repo.ReactionSetRepo;
 import de.kaleidox.galio.util.Constant;
 import lombok.extern.java.Log;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -47,7 +46,6 @@ import org.springframework.stereotype.Component;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
@@ -66,17 +64,17 @@ public class ReactionRoleService extends ListenerAdapter {
     public static final String OPTION_ID_NAME            = "option-name";
     public static final String OPTION_ID_DESCRIPTION     = "option-description";
 
-    @Autowired GuildPreferenceRepo guilds;
-    @Autowired JDA                 jda;
+    @Autowired ReactionSetRepo setRepo;
+    @Autowired JDA             jda;
 
     @Command(permission = "8")
     @Description("Resend all reaction role messages in this server")
     @SuppressWarnings("UnusedReturnValue")
     public String resend(Guild guild) {
-        var prefs = guilds.findById(guild.getIdLong()).orElse(null);
-        if (prefs == null || prefs.getRoleSets().isEmpty()) return "There are no configured reaction roles";
+        var sets = setRepo.findAllByGuildId(guild.getIdLong());
+        if (sets.isEmpty()) return "There are no configured reaction roles";
 
-        for (var roleSet : prefs.getRoleSets()) {
+        for (var roleSet : sets) {
             var channelId = roleSet.getChannelId();
             var channel   = jda.getTextChannelById(channelId);
 
@@ -88,8 +86,7 @@ public class ReactionRoleService extends ListenerAdapter {
             // send new message
             var msg = roleSet.createMessage();
             channel.sendMessage(msg.build()).flatMap(it -> {
-                roleSet.setMessageId(it.getIdLong());
-                guilds.save(prefs);
+                setRepo.setMessageId(guild.getIdLong(), roleSet.getName(), it.getIdLong());
 
                 return RestAction.allOf(roleSet.getRoles()
                         .stream()
@@ -111,25 +108,14 @@ public class ReactionRoleService extends ListenerAdapter {
     ) {
         if (name.contains("-")) throw new CommandError("Name cannot contain dashes (`-`)");
 
-        var result = guilds.findById(guild.getIdLong());
         var set = new ReactionRoleSet(guild.getIdLong(),
                 name,
                 description,
                 channel.getIdLong(),
                 new ArrayList<>(),
                 null);
-        GuildPreferences prefs;
+        setRepo.save(set);
 
-        if (result.isPresent()) {
-            prefs = result.get();
-
-            if (prefs.getRoleSets().stream().map(ReactionRoleSet::getName).anyMatch(name::equals))
-                throw new CommandError("A role set with the name `%s` already exists!".formatted(name));
-
-            prefs.getRoleSets().add(set);
-        } else prefs = new GuildPreferences(guild.getIdLong(), Set.of(set));
-
-        guilds.save(prefs);
         return "Reaction role set `%s` was created".formatted(name);
     }
 
@@ -139,12 +125,12 @@ public class ReactionRoleService extends ListenerAdapter {
             Guild guild,
             @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) String name
     ) {
-        var result = guilds.findById(guild.getIdLong());
-        if (result.isEmpty()) return "No action performed";
+        var guildId = guild.getIdLong();
 
-        var prefs = result.get();
-        prefs.getRoleSets().removeIf(roleSet -> roleSet.getName().equals(name));
-        guilds.save(prefs);
+        if (setRepo.findById(new ReactionRoleSet.Key(guildId, name)).isEmpty())
+            return "There is no reaction set with that name";
+
+        setRepo.removeBy(guildId, name);
         return "Role reaction set removed";
     }
 
@@ -155,7 +141,8 @@ public class ReactionRoleService extends ListenerAdapter {
             @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) String set
     ) {
         final var guildId = guild.getIdLong();
-        return guilds.findReactionRoleSet(guildId, set).map(roleSet -> {
+
+        return setRepo.findById(new ReactionRoleSet.Key(guildId, set)).map(roleSet -> {
             var message = roleSet.createMessage();
 
             message.addComponents(ActionRow.of(Button.secondary(COMPONENT_ID_ROLESET_EDIT + set, "Edit details..."),
@@ -167,13 +154,33 @@ public class ReactionRoleService extends ListenerAdapter {
     }
 
     @Command(permission = "8")
+    @Description("Create a new reaction role")
+    public Object createrole(
+            Guild guild, @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) String set,
+            @Command.Arg Role role, @Command.Arg String emoji, @Command.Arg String name, @Command.Arg String description
+    ) {
+        var roleSet = setRepo.findById(new ReactionRoleSet.Key(guild.getIdLong(), set))
+                .orElseThrow(() -> new CommandError("No such roleset: " + set));
+
+        if (roleSet.findBinding(name).isPresent()) {
+            return "%s Role binding with name %s already exists".formatted(Constant.EMOJI_WARNING, name);
+        }
+
+        var obj = new ReactionRoleBinding(emoji, name, description, role.getIdLong());
+        roleSet.getRoles().add(obj);
+        setRepo.save(roleSet);
+
+        return new MessageCreateBuilder().setContent("Role created").setEmbeds(roleSet.toEmbed().build()).build();
+    }
+
+    @Command(permission = "8")
     @Description("Edit an existing reaction role")
     public MessageCreateData editrole(
             Guild guild, @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) String set,
             @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillRoleNames.class) String role
     ) {
         final var guildId = guild.getIdLong();
-        return guilds.findReactionRoleSet(guildId, set).map(roleSet -> {
+        return setRepo.findById(new ReactionRoleSet.Key(guildId, set)).map(roleSet -> {
             var roleBind = roleSet.findBinding(role).orElseThrow(() -> new CommandError("No such role: " + role));
             var embed    = new EmbedBuilder().setColor(new Color(role.hashCode())).addField(roleBind.toField());
 
@@ -201,7 +208,7 @@ public class ReactionRoleService extends ListenerAdapter {
             setName  = setName.substring(0, ci);
         }
         var action  = componentId.substring(0, li + 1);
-        var roleSet = guilds.findReactionRoleSet(event.getGuild().getIdLong(), setName).orElseThrow();
+        var roleSet = setRepo.findById(new ReactionRoleSet.Key(event.getGuild().getIdLong(), setName)).orElseThrow();
 
         switch (action) {
             case COMPONENT_ID_ROLE_ADD -> event.replyModal(createRoleMutatorModal(componentId,
@@ -247,8 +254,8 @@ public class ReactionRoleService extends ListenerAdapter {
             setName  = setName.substring(0, ci);
         }
         var action      = componentId.substring(0, li + 1);
-        var prefs       = guilds.findById(event.getGuild().getIdLong()).orElseThrow();
-        var roleSet     = prefs.findReactionRoleSet(setName).orElseThrow();
+        var guildId = event.getGuild().getIdLong();
+        var roleSet = setRepo.findById(new ReactionRoleSet.Key(guildId, setName)).orElseThrow();
         var interaction = event.getInteraction();
 
         switch (action) {
@@ -259,7 +266,7 @@ public class ReactionRoleService extends ListenerAdapter {
                 mapping = interaction.getValue(OPTION_ID_NAME);
                 if (mapping != null && !mapping.getAsString().isBlank()) {
                     var buf = mapping.getAsString();
-                    if (prefs.findReactionRoleSet(buf).isPresent()) {
+                    if (setRepo.findById(new ReactionRoleSet.Key(guildId, buf)).isPresent()) {
                         event.reply("%s Role set with name %s already exists".formatted(Constant.EMOJI_WARNING, buf))
                                 .setEphemeral(true)
                                 .queue();
@@ -270,6 +277,8 @@ public class ReactionRoleService extends ListenerAdapter {
 
                 mapping = interaction.getValue(OPTION_ID_DESCRIPTION);
                 if (mapping != null && !mapping.getAsString().isBlank()) roleSet.setDescription(mapping.getAsString());
+
+                setRepo.save(roleSet);
             }
             case COMPONENT_ID_ROLE_ADD -> {
                 var role = Objects.requireNonNull(interaction.getValue(OPTION_ID_ROLE), "role value")
@@ -285,16 +294,15 @@ public class ReactionRoleService extends ListenerAdapter {
                     event.reply("%s Role binding with name %s already exists".formatted(Constant.EMOJI_WARNING, name))
                             .setEphemeral(true)
                             .queue();
-                    return;
                 }
 
-                var obj = new ReactionRoleBinding(emoji, name, description, role.getIdLong());
-                roleSet.getRoles().add(obj);
+                createrole(event.getGuild(), setName, role, emoji, name, description);
             }
             case COMPONENT_ID_ROLE_REMOVE -> {
                 var _roleName = Objects.requireNonNull(interaction.getValue(OPTION_ID_ROLE), "role value")
                         .getAsString();
                 roleSet.getRoles().removeIf(role -> role.getName().equals(_roleName));
+                setRepo.save(roleSet);
             }
             case COMPONENT_ID_ROLE_EDIT -> {
                 var role = roleSet.findBinding(roleName).orElseThrow();
@@ -308,7 +316,7 @@ public class ReactionRoleService extends ListenerAdapter {
                 mapping = interaction.getValue(OPTION_ID_NAME);
                 if (mapping != null && !mapping.getAsString().isBlank()) {
                     var buf = mapping.getAsString();
-                    if (prefs.findReactionRoleSet(buf).isPresent()) {
+                    if (roleSet.findBinding(roleName).isPresent()) {
                         event.reply("%s Role binding with name %s already exists".formatted(Constant.EMOJI_WARNING,
                                 buf)).setEphemeral(true).queue();
                         return;
@@ -318,11 +326,12 @@ public class ReactionRoleService extends ListenerAdapter {
 
                 mapping = interaction.getValue(OPTION_ID_DESCRIPTION);
                 if (mapping != null && !mapping.getAsString().isBlank()) role.setDescription(mapping.getAsString());
+
+                setRepo.save(roleSet);
             }
             default -> throw new IllegalStateException("Unexpected value: " + action);
         }
 
-        guilds.save(prefs);
         event.reply("This interaction has been successful!").setEphemeral(true).queue();
     }
 
@@ -342,13 +351,13 @@ public class ReactionRoleService extends ListenerAdapter {
 
         if (user == null || user instanceof SelfUser) return;
 
-        guilds.findReactionRoleSet(event.getGuild().getIdLong(), event.getMessageIdLong())
-                .stream()
-                .flatMap(roleSet -> roleSet.getRoles()
-                        .stream()
-                        .filter(role -> role.getEmoji().equals(emoji.getFormatted())))
-                .findAny()
-                .map(ReactionRoleBinding::getRoleId)
+        var result = setRepo.findByMessageId(event.getMessageIdLong());
+        if (result.isEmpty()) return;
+        var set = result.get();
+
+        var binding = set.getRoles().stream().filter(role -> role.getEmoji().equals(emoji.getFormatted())).findAny();
+        if (binding.isEmpty()) event.getReaction().removeReaction(event.getUser()).queue();
+        binding.map(ReactionRoleBinding::getRoleId)
                 .map(jda::getRoleById)
                 .ifPresent(role -> action.apply(user, role).queue());
     }
