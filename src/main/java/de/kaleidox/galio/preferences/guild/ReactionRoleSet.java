@@ -58,7 +58,7 @@ public class ReactionRoleSet {
         var embed = new EmbedBuilder().setTitle(name)
                 .setDescription(description)
                 .setColor(new Color(hashCode()))
-                .setFooter("Select your desired roles by reacting below");
+                .setFooter(method.getFooterText());
         roles.stream().map(ReactionRoleBinding::toField).forEachOrdered(embed::addField);
         return embed;
     }
@@ -75,7 +75,7 @@ public class ReactionRoleSet {
     @Getter
     @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
     public enum Method {
-        PICK_ONE("Select one") {
+        PICK_ONE("Select one", "Pick one of the options by reacting below") {
             @Override
             public boolean mayPerformAction(GenericMessageReactionEvent event) {
                 var user  = event.retrieveUser().complete();
@@ -90,12 +90,12 @@ public class ReactionRoleSet {
                         .findAny()
                         .isEmpty();
             }
-        }, PICK_MANY("Pick all that apply") {
+        }, PICK_MANY("Pick all that apply", "Select your desired roles by reacting below") {
             @Override
             public boolean mayPerformAction(GenericMessageReactionEvent event) {
                 return true;
             }
-        }, VERIFY("Select one thing, only once") {
+        }, VERIFY("Select one thing, only once", "Verify by reacting below") {
             @Override
             public boolean mayPerformAction(GenericMessageReactionEvent event) {
                 var member = event.retrieveMember().complete();
@@ -112,9 +112,11 @@ public class ReactionRoleSet {
         };
 
         SelectOption selectOption;
+        String footerText;
 
-        Method(String label) {
+        Method(String label, String footerText) {
             this.selectOption = SelectOption.of(label, name());
+            this.footerText = footerText;
         }
 
         public abstract boolean mayPerformAction(GenericMessageReactionEvent event);
