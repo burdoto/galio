@@ -62,6 +62,13 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.register('simpleWar', Copy) {
+    dependsOn tasks.bootWar
+    from tasks.bootWar.outputs.files.singleFile
+    into "$rootDir/build/libs"
+    rename { 'galio.jar' }
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }
