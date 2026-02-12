@@ -7,6 +7,7 @@ import de.kaleidox.galio.util.Constant;
 import lombok.extern.java.Log;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.label.Label;
@@ -21,11 +22,14 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.react.GenericMessageReactionEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.modals.Modal;
 import net.dv8tion.jda.api.requests.RestAction;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
@@ -196,6 +200,19 @@ public class ReactionRoleService extends ListenerAdapter {
                     .addComponents(ActionRow.of(Button.primary(COMPONENT_ID_ROLE_EDIT + set + ':' + role, "Edit...")))
                     .build();
         }).orElseThrow(() -> new CommandError("Could not find reaction role set with name `%s`".formatted(set)));
+    }
+
+    @Override
+    public void onMessageContextInteraction(MessageContextInteractionEvent event) {
+        if (!event.getInteraction().getName().equals("Refresh")) return;
+
+        var message = event.getTarget();
+        if (!(message.getAuthor() instanceof SelfUser)) return;
+
+        var set = setRepo.findByMessageId(message.getIdLong()).orElseThrow();
+        message.editMessageEmbeds(set.toEmbed().build()).queue();
+
+        event.reply("Successfully refreshed the message").queue();
     }
 
     @Override
@@ -428,7 +445,11 @@ public class ReactionRoleService extends ListenerAdapter {
     @EventListener
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public void on(ApplicationStartedEvent event) {
-        event.getApplicationContext().getBean(JDA.class).addEventListener(this);
+        var jda = event.getApplicationContext().getBean(JDA.class);
+        jda.addEventListener(this);
+        jda.upsertCommand(Commands.message("Refresh")
+                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))).queue();
+
         event.getApplicationContext().getBean(CommandManager.class).register(this);
 
         log.info("Initialized");
