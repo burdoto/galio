@@ -66,7 +66,7 @@ tasks.register('simpleWar', Copy) {
     dependsOn tasks.bootWar
     from tasks.bootWar.outputs.files.singleFile
     into "$rootDir/build/libs"
-    rename { 'galio.jar' }
+    rename { 'galio.war' }
 }
 
 tasks.named('test') {
