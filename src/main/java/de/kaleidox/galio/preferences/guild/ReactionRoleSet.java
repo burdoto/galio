@@ -43,13 +43,13 @@ import static de.kaleidox.galio.util.ApplicationContextProvider.*;
 @IdClass(ReactionRoleSet.Key.class)
 @Table(uniqueConstraints = { @UniqueConstraint(columnNames = "message_id") })
 public class ReactionRoleSet {
-    @Collate("utf8mb4_uca1400_ai_ci") @Id                                         long                      guildId;
-    @Collate("utf8mb4_uca1400_ai_ci") @Id                                         String                    name;
-    @Collate("utf8mb4_uca1400_ai_ci")                                             String                    description;
-    @Collate("utf8mb4_uca1400_ai_ci")                                             long                      channelId;
-    @Collate("utf8mb4_uca1400_ai_ci")                                             Method                    method;
-    @Collate("utf8mb4_uca1400_ai_ci") @ElementCollection(fetch = FetchType.EAGER) List<ReactionRoleBinding> roles;
-    @Collate("utf8mb4_uca1400_ai_ci") @Nullable                                   Long                      messageId;
+    @Collate("utf8mb4_uca1400_ai_ci") @Id       long                      guildId;
+    @Collate("utf8mb4_uca1400_ai_ci") @Id       String                    name;
+    @Collate("utf8mb4_uca1400_ai_ci")           String                    description;
+    @Collate("utf8mb4_uca1400_ai_ci")           long                      channelId;
+    @Collate("utf8mb4_uca1400_ai_ci")           Method                    method;
+    @Collate("utf8mb4_uca1400_ai_ci") @Nullable Long                      messageId;
+    @ElementCollection(fetch = FetchType.EAGER) List<ReactionRoleBinding> roles;
 
     public MessageCreateBuilder createMessage() {
         return new MessageCreateBuilder().addEmbeds(toEmbed().build());
