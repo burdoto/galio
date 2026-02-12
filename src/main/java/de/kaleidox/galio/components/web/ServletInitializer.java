@@ -21,7 +21,7 @@ public class ServletInitializer extends SpringBootServletInitializer implements
     public void customize(ConfigurableWebServerFactory factory) {
         if (Debug.isDebug()) factory.setPort(8080);
         else {
-            factory.setPort(25545);
+            factory.setPort(8084);
             factory.setAddress(InetAddress.getLoopbackAddress());
         }
     }
