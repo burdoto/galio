@@ -48,7 +48,7 @@ import java.util.function.Predicate;
 @Log
 @Service
 @Command("embed")
-public class EmbedBuilderController extends ListenerAdapter {
+public class EmbedBuilderService extends ListenerAdapter {
     public static final String INTERACTION_EDIT         = "Edit Embed";
     public static final String INTERACTION_ADD_FIELD    = "edit-field-add";
     public static final String INTERACTION_EDIT_FIELD   = "edit-field-edit";
@@ -62,7 +62,7 @@ public class EmbedBuilderController extends ListenerAdapter {
 
     private final Map<@NotNull Long, @NotNull EmbedEditorSession> activeEdits = new ConcurrentHashMap<>();
 
-    @Command("create")
+    @Command(value = "create", permission = "8192")
     @Description("Create a new embed message")
     public MessageCreateData create(User user, MessageChannelUnion channel) {
         var messageCreateData = createEmbedEditMenu(null).build();

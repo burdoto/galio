@@ -73,7 +73,7 @@ public class ReactionRoleService extends ListenerAdapter {
     @Autowired ReactionSetRepo setRepo;
     @Autowired JDA             jda;
 
-    @Command(permission = "8")
+    @Command(permission = "268435456")
     @Description("Resend reaction role messages")
     @SuppressWarnings("UnusedReturnValue")
     public String resend(
@@ -112,7 +112,7 @@ public class ReactionRoleService extends ListenerAdapter {
         return "Reaction messages were resent";
     }
 
-    @Command(permission = "8")
+    @Command(permission = "268435456")
     @Description("Create a set of role reactions")
     public String createset(
             Guild guild, @Command.Arg String name, @Command.Arg String description, @Command.Arg TextChannel channel,
@@ -132,7 +132,7 @@ public class ReactionRoleService extends ListenerAdapter {
         return "Reaction role set `%s` was created".formatted(name);
     }
 
-    @Command(permission = "8")
+    @Command(permission = "268435456")
     @Description("Remove a set of role reactions")
     public String removeset(
             Guild guild,
@@ -147,7 +147,7 @@ public class ReactionRoleService extends ListenerAdapter {
         return "Role reaction set removed";
     }
 
-    @Command(permission = "8")
+    @Command(permission = "268435456")
     @Description("Edit an existing set of role reactions")
     public MessageCreateData editset(
             Guild guild,
@@ -166,7 +166,7 @@ public class ReactionRoleService extends ListenerAdapter {
         }).orElseThrow(() -> new CommandError("Could not find reaction role set with name `%s`".formatted(set)));
     }
 
-    @Command(permission = "8")
+    @Command(permission = "268435456")
     @Description("Create a new reaction role")
     public Object createrole(
             Guild guild, @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) String set,
@@ -186,7 +186,7 @@ public class ReactionRoleService extends ListenerAdapter {
         return new MessageCreateBuilder().setContent("Role created").setEmbeds(roleSet.toEmbed().build()).build();
     }
 
-    @Command(permission = "8")
+    @Command(permission = "268435456")
     @Description("Edit an existing reaction role")
     public MessageCreateData editrole(
             Guild guild, @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) String set,
