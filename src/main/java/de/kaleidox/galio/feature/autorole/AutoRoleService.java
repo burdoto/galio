@@ -55,8 +55,9 @@ public class AutoRoleService extends ListenerAdapter {
     @Command(permission = "268435456")
     @Description("Create a new mapping for an automated role")
     public String create(
-            Guild guild, @Command.Arg Role role,
-            @Command.Arg(autoFillProvider = DiscordTrigger.AutoFillNames.class) String trigger
+            Guild guild, @Command.Arg @Description("The role to use for the automation") Role role,
+            @Command.Arg(autoFillProvider = DiscordTrigger.AutoFillNames.class) @Description(
+                    "The trigger to use for the automation") String trigger
     ) {
         if (repo.existsById(new AutoRoleMapping.Key(guild.getIdLong(), role.getIdLong())))
             throw new CommandError("Automation for role %s already exists".formatted(role));
@@ -81,7 +82,7 @@ public class AutoRoleService extends ListenerAdapter {
 
     @Command(permission = "268435456")
     @Description("Remove a mapping for an automated role")
-    public String remove(Guild guild, @Command.Arg Role role) {
+    public String remove(Guild guild, @Command.Arg @Description("The role to remove from automations") Role role) {
         var key = new AutoRoleMapping.Key(guild.getIdLong(), role.getIdLong());
 
         if (!repo.existsById(key)) throw new CommandError("Mapping for role %s was not found".formatted(role));
