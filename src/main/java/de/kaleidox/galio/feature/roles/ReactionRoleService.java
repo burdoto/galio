@@ -1,5 +1,6 @@
 package de.kaleidox.galio.feature.roles;
 
+import de.kaleidox.galio.feature.auditlog.model.AuditLogSender;
 import de.kaleidox.galio.feature.roles.model.ReactionRoleBinding;
 import de.kaleidox.galio.feature.roles.model.ReactionRoleSet;
 import de.kaleidox.galio.repo.ReactionSetRepo;
@@ -16,6 +17,7 @@ import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.SelfUser;
 import net.dv8tion.jda.api.entities.User;
@@ -58,7 +60,7 @@ import java.util.stream.Stream;
 @Service
 @Command("roles")
 @Description("Configure reaction roles")
-public class ReactionRoleService extends ListenerAdapter {
+public class ReactionRoleService extends ListenerAdapter implements AuditLogSender {
     public static final String COMPONENT_ID_ROLESET_EDIT = "roleset-edit-";
     public static final String COMPONENT_ID_ROLE_ADD     = "roles-add-";
     public static final String COMPONENT_ID_ROLE_REMOVE  = "roles-remove-";
@@ -77,7 +79,7 @@ public class ReactionRoleService extends ListenerAdapter {
     @Description("Resend reaction role messages")
     @SuppressWarnings("UnusedReturnValue")
     public String resend(
-            Guild guild,
+            Guild guild, Member member,
             @Command.Arg(required = false, autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) @Description(
                     "The reaction set to resend") @Nullable String set
     ) {
@@ -109,14 +111,19 @@ public class ReactionRoleService extends ListenerAdapter {
             }).queue();
         }
 
+        audit().newEntry()
+                .guild(guild)
+                .source(this)
+                .message("%s has resent reaction-role message for set %s".formatted(member, set))
+                .queue();
         return "Reaction messages were resent";
     }
 
     @Command(permission = "268435456")
     @Description("Create a set of role reactions")
     public String createset(
-            Guild guild, @Command.Arg String name, @Command.Arg String description, @Command.Arg TextChannel channel,
-            @Command.Arg ReactionRoleSet.Method method
+            Guild guild, Member member, @Command.Arg String name, @Command.Arg String description,
+            @Command.Arg TextChannel channel, @Command.Arg ReactionRoleSet.Method method
     ) {
         if (name.contains("-")) throw new CommandError("Name cannot contain dashes (`-`)");
 
@@ -127,6 +134,12 @@ public class ReactionRoleService extends ListenerAdapter {
                 method,
                 null,
                 new ArrayList<>());
+
+        audit().newEntry()
+                .guild(guild)
+                .source(this)
+                .message("%s is applying changes to set %s".formatted(member, set))
+                .queue();
         setRepo.save(set);
 
         return "Reaction role set `%s` was created".formatted(name);
@@ -135,7 +148,7 @@ public class ReactionRoleService extends ListenerAdapter {
     @Command(permission = "268435456")
     @Description("Remove a set of role reactions")
     public String removeset(
-            Guild guild,
+            Guild guild, Member member,
             @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) String name
     ) {
         var guildId = guild.getIdLong();
@@ -143,6 +156,7 @@ public class ReactionRoleService extends ListenerAdapter {
         if (setRepo.findById(new ReactionRoleSet.Key(guildId, name)).isEmpty())
             return "There is no reaction set with that name";
 
+        audit().newEntry().guild(guild).source(this).message("%s is removing set %s".formatted(member, name)).queue();
         setRepo.removeBy(guildId, name);
         return "Role reaction set removed";
     }
@@ -169,8 +183,9 @@ public class ReactionRoleService extends ListenerAdapter {
     @Command(permission = "268435456")
     @Description("Create a new reaction role")
     public Object createrole(
-            Guild guild, @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) String set,
-            @Command.Arg Role role, @Command.Arg String emoji, @Command.Arg String name, @Command.Arg String description
+            Guild guild, Member member,
+            @Command.Arg(autoFillProvider = ReactionRoleSet.AutoFillSetNames.class) String set, @Command.Arg Role role,
+            @Command.Arg String emoji, @Command.Arg String name, @Command.Arg String description
     ) {
         var roleSet = setRepo.findById(new ReactionRoleSet.Key(guild.getIdLong(), set))
                 .orElseThrow(() -> new CommandError("No such roleset: " + set));
@@ -181,6 +196,12 @@ public class ReactionRoleService extends ListenerAdapter {
 
         var obj = new ReactionRoleBinding(emoji, name, description, role.getIdLong());
         roleSet.getRoles().add(obj);
+
+        audit().newEntry()
+                .guild(guild)
+                .source(this)
+                .message("%s is adding role %s to set %s".formatted(member, obj, roleSet))
+                .queue();
         setRepo.save(roleSet);
 
         return new MessageCreateBuilder().setContent("Role created").setEmbeds(roleSet.toEmbed().build()).build();
@@ -213,6 +234,11 @@ public class ReactionRoleService extends ListenerAdapter {
         var set = setRepo.findByMessageId(message.getIdLong()).orElseThrow();
         message.editMessageEmbeds(set.toEmbed().build()).queue();
 
+        audit().newEntry()
+                .guild(event.getGuild())
+                .source(this)
+                .message("%s is refreshing reaction-role message for set %s".formatted(event.getMember(), set))
+                .queue();
         event.reply("Successfully refreshed the message").setEphemeral(true).queue();
     }
 
@@ -308,6 +334,11 @@ public class ReactionRoleService extends ListenerAdapter {
                 if (mapping != null) roleSet.setMethod(ReactionRoleSet.Method.valueOf(mapping.getAsStringList()
                         .getFirst()));
 
+                audit().newEntry()
+                        .guild(event.getGuild())
+                        .source(this)
+                        .message("%s is editing reaction-role set %s".formatted(event.getMember(), roleSet))
+                        .queue();
                 setRepo.save(roleSet);
             }
             case COMPONENT_ID_ROLE_ADD -> {
@@ -326,12 +357,20 @@ public class ReactionRoleService extends ListenerAdapter {
                             .queue();
                 }
 
-                createrole(event.getGuild(), setName, role, emoji, name, description);
+                createrole(event.getGuild(), event.getMember(), setName, role, emoji, name, description);
             }
             case COMPONENT_ID_ROLE_REMOVE -> {
                 var _roleName = Objects.requireNonNull(interaction.getValue(OPTION_ID_ROLE), "role value")
                         .getAsString();
                 roleSet.getRoles().removeIf(role -> role.getName().equals(_roleName));
+
+                audit().newEntry()
+                        .guild(event.getGuild())
+                        .source(this)
+                        .message("%s is removing reaction-role %s from set %s".formatted(event.getMember(),
+                                _roleName,
+                                roleSet))
+                        .queue();
                 setRepo.save(roleSet);
             }
             case COMPONENT_ID_ROLE_EDIT -> {
@@ -362,6 +401,11 @@ public class ReactionRoleService extends ListenerAdapter {
             default -> throw new IllegalStateException("Unexpected value: " + action);
         }
 
+        audit().newEntry()
+                .guild(event.getGuild())
+                .source(this)
+                .message("%s is editing reaction-role %s in set %s".formatted(event.getMember(), roleName, roleSet))
+                .queue();
         event.reply("This interaction has been successful!").setEphemeral(true).queue();
     }
 

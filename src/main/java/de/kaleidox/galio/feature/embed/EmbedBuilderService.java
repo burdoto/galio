@@ -1,5 +1,6 @@
 package de.kaleidox.galio.feature.embed;
 
+import de.kaleidox.galio.feature.auditlog.model.AuditLogSender;
 import lombok.extern.java.Log;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
@@ -48,7 +49,7 @@ import java.util.function.Predicate;
 @Log
 @Service
 @Command("embed")
-public class EmbedBuilderService extends ListenerAdapter {
+public class EmbedBuilderService extends ListenerAdapter implements AuditLogSender {
     public static final String INTERACTION_EDIT         = "Edit Embed";
     public static final String INTERACTION_ADD_FIELD    = "edit-field-add";
     public static final String INTERACTION_EDIT_FIELD   = "edit-field-edit";
@@ -116,9 +117,18 @@ public class EmbedBuilderService extends ListenerAdapter {
                                 .build()))
                         .build()).setEphemeral(true).queue();
             }
-            case INTERACTION_SUBMIT -> editor.applyEdits()
-                    .flatMap($ -> event.reply("Edits applied").setEphemeral(true))
-                    .queue();
+            case INTERACTION_SUBMIT -> {
+                audit().newEntry()
+                        .guild(event.getGuild())
+                        .source(this)
+                        .message(editor.getMessage() == null
+                                 ? "%s is creating a new embed in channel %s".formatted(event.getMember(),
+                                editor.getChannel())
+                                 : "%s is submitting edits to embed in message %s".formatted(event.getMember(),
+                                         editor.getMessage().getJumpUrl()))
+                        .queue();
+                editor.applyEdits().flatMap($ -> event.reply("Edits applied").setEphemeral(true)).queue();
+            }
         }
     }
 
@@ -157,6 +167,12 @@ public class EmbedBuilderService extends ListenerAdapter {
             component.handleInteraction(editor.getEmbed(), event);
         }
 
+        audit().newEntry()
+                .guild(event.getGuild())
+                .source(this)
+                .message("%s is submitting edits to embed in message %s".formatted(event.getMember(),
+                        Objects.requireNonNull(editor.getMessage(), "message for audit").getJumpUrl()))
+                .queue();
         event.editMessageEmbeds(editor.getEmbed().build()).queue();
     }
 

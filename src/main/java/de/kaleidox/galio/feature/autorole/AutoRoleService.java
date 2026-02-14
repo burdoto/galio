@@ -1,5 +1,6 @@
 package de.kaleidox.galio.feature.autorole;
 
+import de.kaleidox.galio.feature.auditlog.model.AuditLogSender;
 import de.kaleidox.galio.feature.autorole.model.AutoRoleMapping;
 import de.kaleidox.galio.repo.AutoRoleRepository;
 import de.kaleidox.galio.trigger.DiscordTrigger;
@@ -8,6 +9,7 @@ import lombok.extern.java.Log;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.GenericEvent;
 import net.dv8tion.jda.api.events.guild.member.GenericGuildMemberEvent;
@@ -33,7 +35,7 @@ import java.util.function.Consumer;
 @Service
 @Command("autorole")
 @Description("Configure automatically assigned roles")
-public class AutoRoleService extends ListenerAdapter {
+public class AutoRoleService extends ListenerAdapter implements AuditLogSender {
     @Autowired       AutoRoleRepository      repo;
     @Lazy @Autowired Event.Bus<GenericEvent> autoRoleEventBus;
 
@@ -55,7 +57,7 @@ public class AutoRoleService extends ListenerAdapter {
     @Command(permission = "268435456")
     @Description("Create a new mapping for an automated role")
     public String create(
-            Guild guild, @Command.Arg @Description("The role to use for the automation") Role role,
+            Guild guild, Member member, @Command.Arg @Description("The role to use for the automation") Role role,
             @Command.Arg(autoFillProvider = DiscordTrigger.AutoFillNames.class) @Description(
                     "The trigger to use for the automation") String trigger
     ) {
@@ -74,6 +76,11 @@ public class AutoRoleService extends ListenerAdapter {
 
         var autoRoleMapping = mapping.build();
 
+        audit().newEntry()
+                .guild(guild)
+                .source(this)
+                .message("%s is creating an automation for role %s, based on %s".formatted(member, role, trigger))
+                .queue();
         repo.save(autoRoleMapping);
         initialize(autoRoleMapping);
 
@@ -82,11 +89,19 @@ public class AutoRoleService extends ListenerAdapter {
 
     @Command(permission = "268435456")
     @Description("Remove a mapping for an automated role")
-    public String remove(Guild guild, @Command.Arg @Description("The role to remove from automations") Role role) {
+    public String remove(
+            Guild guild, Member member,
+            @Command.Arg @Description("The role to remove from automations") Role role
+    ) {
         var key = new AutoRoleMapping.Key(guild.getIdLong(), role.getIdLong());
 
         if (!repo.existsById(key)) throw new CommandError("Mapping for role %s was not found".formatted(role));
 
+        audit().newEntry()
+                .guild(guild)
+                .source(this)
+                .message("%s is removing an automation for role %s".formatted(member, role))
+                .queue();
         repo.deleteById(key);
         return "Automation for role %s was deleted".formatted(role);
     }
@@ -113,7 +128,7 @@ public class AutoRoleService extends ListenerAdapter {
     }
 
     @Value
-    private static class EventHandler implements Consumer<GenericGuildMemberEvent> {
+    private class EventHandler implements Consumer<GenericGuildMemberEvent> {
         AutoRoleMapping mapping;
 
         @Override
@@ -127,6 +142,11 @@ public class AutoRoleService extends ListenerAdapter {
                 return;
             }
 
+            audit().newEntry()
+                    .guild(guild)
+                    .source(this)
+                    .message("%s is automatically receiving role %s, as defined by %s".formatted(member, role, mapping))
+                    .queue();
             guild.addRoleToMember(member, role).queue();
         }
     }

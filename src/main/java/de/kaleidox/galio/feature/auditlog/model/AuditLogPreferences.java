@@ -1,0 +1,29 @@
+package de.kaleidox.galio.feature.auditlog.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.JDA;
+
+import static de.kaleidox.galio.util.ApplicationContextProvider.*;
+
+@Data
+@Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AuditLogPreferences {
+    @Id long guildId;
+    long channelId;
+
+    public EmbedBuilder toEmbed() {
+        var channel = bean(JDA.class).getTextChannelById(channelId);
+
+        return new EmbedBuilder().setTitle("Audit Log Configuration")
+                .addField("Channel", channel.getAsMention(), false);
+    }
+}
