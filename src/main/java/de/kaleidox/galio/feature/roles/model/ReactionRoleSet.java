@@ -1,4 +1,4 @@
-package de.kaleidox.galio.preferences.guild;
+package de.kaleidox.galio.feature.roles.model;
 
 import de.kaleidox.galio.repo.ReactionSetRepo;
 import jakarta.persistence.ElementCollection;

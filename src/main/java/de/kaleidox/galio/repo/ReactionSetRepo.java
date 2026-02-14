@@ -1,6 +1,6 @@
 package de.kaleidox.galio.repo;
 
-import de.kaleidox.galio.preferences.guild.ReactionRoleSet;
+import de.kaleidox.galio.feature.roles.model.ReactionRoleSet;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

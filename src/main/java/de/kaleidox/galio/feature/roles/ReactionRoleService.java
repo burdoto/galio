@@ -1,7 +1,7 @@
 package de.kaleidox.galio.feature.roles;
 
-import de.kaleidox.galio.preferences.guild.ReactionRoleBinding;
-import de.kaleidox.galio.preferences.guild.ReactionRoleSet;
+import de.kaleidox.galio.feature.roles.model.ReactionRoleBinding;
+import de.kaleidox.galio.feature.roles.model.ReactionRoleSet;
 import de.kaleidox.galio.repo.ReactionSetRepo;
 import de.kaleidox.galio.util.Constant;
 import lombok.extern.java.Log;
