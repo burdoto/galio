@@ -12,6 +12,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.modals.Modal;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
@@ -28,6 +29,7 @@ public enum EmbedComponent {
                                     TextInput.create(OPTION_VALUE, TextInputStyle.SHORT)
                                             .setValue(embed.getTitle())
                                             .setMaxLength(TITLE_MAX_LENGTH)
+                                            .setRequired(false)
                                             .build()),
                             Label.of("URL",
                                     TextInput.create(OPTION_URL, TextInputStyle.SHORT)
@@ -59,7 +61,8 @@ public enum EmbedComponent {
                     .addComponents(Label.of("Description",
                             TextInput.create(OPTION_VALUE, TextInputStyle.PARAGRAPH)
                                     .setValue(embed.getDescription())
-                                    .setMaxLength(DESCRIPTION_MAX_LENGTH)
+                                    .setMaxLength(4000 /*DESCRIPTION_MAX_LENGTH*/)
+                                    .setRequired(false)
                                     .build()))
                     .build();
         }
@@ -83,7 +86,10 @@ public enum EmbedComponent {
             return Modal.create(modalId(), "Editing embed timestamp")
                     .addComponents(Label.of("Timestamp",
                             TextInput.create(OPTION_VALUE, TextInputStyle.SHORT)
-                                    .setValue(embed.getTimestamp() == null ? null : embed.getTimestamp().format(FORMAT))
+                                    .setValue(embed.getTimestamp() == null
+                                              ? LocalDateTime.now().format(FORMAT)
+                                              : embed.getTimestamp().format(FORMAT))
+                                    .setRequired(false)
                                     .build()))
                     .build();
         }
@@ -109,6 +115,7 @@ public enum EmbedComponent {
                                     .setValue(embed.getColor() == null
                                               ? null
                                               : '#' + Integer.toHexString(embed.getColor().getRGB()))
+                                    .setRequired(false)
                                     .build()))
                     .build();
         }
@@ -136,6 +143,7 @@ public enum EmbedComponent {
                             TextInput.create(OPTION_VALUE, TextInputStyle.SHORT)
                                     .setValue(embed.getThumbnail() == null ? null : embed.getThumbnail().getUrl())
                                     .setMaxLength(URL_MAX_LENGTH)
+                                    .setRequired(false)
                                     .build()))
                     .build();
         }
@@ -160,6 +168,7 @@ public enum EmbedComponent {
                                     TextInput.create(OPTION_NAME, TextInputStyle.SHORT)
                                             .setValue(author == null ? null : author.getName())
                                             .setMaxLength(AUTHOR_MAX_LENGTH)
+                                            .setRequired(false)
                                             .build()),
                             Label.of("Author URL",
                                     TextInput.create(OPTION_URL, TextInputStyle.SHORT)
@@ -205,6 +214,7 @@ public enum EmbedComponent {
                                     TextInput.create(OPTION_VALUE, TextInputStyle.SHORT)
                                             .setValue(footer == null ? null : footer.getText())
                                             .setMaxLength(TEXT_MAX_LENGTH)
+                                            .setRequired(false)
                                             .build()),
                             Label.of("Footer Icon URL",
                                     TextInput.create(OPTION_ICON_URL, TextInputStyle.SHORT)
@@ -237,6 +247,7 @@ public enum EmbedComponent {
                     .addComponents(Label.of("Image URL",
                             TextInput.create(OPTION_VALUE, TextInputStyle.SHORT)
                                     .setValue(embed.getImage() == null ? null : embed.getImage().getUrl())
+                                    .setRequired(false)
                                     .build()))
                     .build();
         }
@@ -256,9 +267,9 @@ public enum EmbedComponent {
 
     public static final String MODAL_ID        = "embed-editor-";
     public static final String OPTION_VALUE    = "option-value";
-    public static final String OPTION_NAME     = "option-value";
-    public static final String OPTION_URL      = "option-value";
-    public static final String OPTION_ICON_URL = "option-value";
+    public static final String OPTION_NAME     = "option-name";
+    public static final String OPTION_URL      = "option-url";
+    public static final String OPTION_ICON_URL = "option-iconurl";
 
     SelectOption selectOption;
 

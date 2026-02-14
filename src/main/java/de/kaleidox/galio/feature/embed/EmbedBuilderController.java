@@ -38,10 +38,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 @Log
 @Service
@@ -114,7 +116,9 @@ public class EmbedBuilderController extends ListenerAdapter {
                                 .build()))
                         .build()).setEphemeral(true).queue();
             }
-            case INTERACTION_SUBMIT -> editor.applyEdits().queue();
+            case INTERACTION_SUBMIT -> editor.applyEdits()
+                    .flatMap($ -> event.reply("Edits applied").setEphemeral(true))
+                    .queue();
         }
     }
 
@@ -129,7 +133,9 @@ public class EmbedBuilderController extends ListenerAdapter {
             var name    = Optional.ofNullable(event.getValue(OPTION_NAME)).map(ModalMapping::getAsString).orElse("");
             var content = Optional.ofNullable(event.getValue(OPTION_CONTENT)).map(ModalMapping::getAsString).orElse("");
             var inline = Optional.ofNullable(event.getValue(OPTION_INLINE))
-                    .map(ModalMapping::getAsString)
+                    .map(ModalMapping::getAsStringList)
+                    .filter(Predicate.not(List::isEmpty))
+                    .map(List::getFirst)
                     .map(Boolean::parseBoolean)
                     .orElse(false);
             var mutated = new MessageEmbed.Field(name, content, inline);
@@ -150,6 +156,8 @@ public class EmbedBuilderController extends ListenerAdapter {
 
             component.handleInteraction(editor.getEmbed(), event);
         }
+
+        event.editMessageEmbeds(editor.getEmbed().build()).queue();
     }
 
     @Override
@@ -212,7 +220,7 @@ public class EmbedBuilderController extends ListenerAdapter {
                                 .setPlaceholder("Select an embed component to edit...")
                                 .build()),
                         ActionRow.of(Button.secondary(INTERACTION_ADD_FIELD, "Add Field..."),
-                                Button.secondary(INTERACTION_ADD_FIELD, "Edit Field..."),
+                                Button.secondary(INTERACTION_EDIT_FIELD, "Edit Field..."),
                                 Button.secondary(INTERACTION_REMOVE_FIELD, "Remove Field..."),
                                 Button.primary(INTERACTION_SUBMIT, "Apply changes")));
 
