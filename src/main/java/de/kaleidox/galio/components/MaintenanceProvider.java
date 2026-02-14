@@ -1,11 +1,9 @@
 package de.kaleidox.galio.components;
 
 import lombok.extern.java.Log;
-import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.User;
 import org.comroid.annotations.Description;
 import org.comroid.api.io.FileFlag;
-import org.comroid.api.java.ResourceLoader;
 import org.comroid.commands.Command;
 import org.comroid.commands.impl.CommandManager;
 import org.comroid.commands.model.CommandError;
@@ -31,7 +29,7 @@ public class MaintenanceProvider {
 
     static {
         long[] ids;
-        try (var json = ResourceLoader.fromResourceString("/static/superadmins.json")) {
+        try (var json = MaintenanceProvider.class.getResourceAsStream("/static/superadmins.json")) {
             var list = new ObjectMapper().readTree(json);
             ids = list.values().stream().mapToLong(JsonNode::asLong).sorted().toArray();
         } catch (IOException e) {
@@ -74,7 +72,7 @@ public class MaintenanceProvider {
     @EventListener
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public void on(ApplicationStartedEvent event) {
-        event.getApplicationContext().getBean(JDA.class).addEventListener(this);
+        //event.getApplicationContext().getBean(JDA.class).addEventListener(this);
         event.getApplicationContext().getBean(CommandManager.class).register(this);
 
         log.info("Initialized");
